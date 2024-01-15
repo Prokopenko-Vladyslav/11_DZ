@@ -4,7 +4,7 @@ from collections import UserDict
 
 class Field:
     def __init__(self, value):
-        self._value = None
+        self.__value = None
         self.value = value
 
     def __repr__(self):
@@ -12,15 +12,15 @@ class Field:
 
     @property
     def value(self):
-        return self._value
+        return self.__value
 
     @value.setter
     def value(self, new_value):
-        self.validate(new_value)
-        self._value = new_value
+        if self.validate(new_value):
+            self.__value = new_value
 
     def validate(self, value):
-        pass  # Base class does not provide validation
+        pass
 
 
 class Name(Field):
@@ -28,10 +28,13 @@ class Name(Field):
 
 
 class Phone(Field):
-    def validate(self, value):
-        if not value.isdigit() or len(value) != 10:
+    def __init__(self, value):
+        super().__init__(value)
+        self.validate_phone()
+
+    def validate_phone(self):
+        if not self.value.isdigit() or len(self.value) != 10:
             raise ValueError("Phone number must contain 10 digits.")
-        super().validate(value)
 
 
 class Birthday(Field):
@@ -116,4 +119,3 @@ class AddressBook(UserDict):
         records = list(self.data.values())
         for i in range(0, len(records), batch_size):
             yield records[i:i + batch_size]
-
