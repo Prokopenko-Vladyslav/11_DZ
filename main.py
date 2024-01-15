@@ -1,13 +1,26 @@
-from collections import UserDict
 from datetime import datetime
+from collections import UserDict
 
 
 class Field:
     def __init__(self, value):
+        self._value = None
         self.value = value
 
     def __repr__(self):
         return str(self.value)
+
+    @property
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self, new_value):
+        self.validate(new_value)
+        self._value = new_value
+
+    def validate(self, value):
+        pass  # Base class does not provide validation
 
 
 class Name(Field):
@@ -15,34 +28,38 @@ class Name(Field):
 
 
 class Phone(Field):
-    def __init__(self, value):
-        super().__init__(value)
-        self.validate_phone()
-
-    def validate_phone(self):
-        if not self.value.isdigit() or len(self.value) != 10:
+    def validate(self, value):
+        if not value.isdigit() or len(value) != 10:
             raise ValueError("Phone number must contain 10 digits.")
+        super().validate(value)
 
 
 class Birthday(Field):
-    def __init__(self, value):
-        super().__init__(value)
-        self.validate_birthday()
-
-    def validate_birthday(self):
+    def validate(self, value):
         try:
-            datetime.strptime(self.value, "%Y-%m-%d")
+            datetime.strptime(value, "%Y-%m-%d")
         except ValueError:
-            raise ValueError("Неправильний формат дня народження. Використовуйте формат: Рік-Місяць-День.")
+            raise ValueError("Invalid date format. Use YYYY-MM-DD.")
+        super().validate(value)
+
+    @property
+    def year(self):
+        return int(self.value.split('-')[0])
+
+    @property
+    def month(self):
+        return int(self.value.split('-')[1])
+
+    @property
+    def day(self):
+        return int(self.value.split('-')[2])
 
 
 class Record:
     def __init__(self, name, birthday=None):
         self.name = Name(name)
         self.phones = []
-        self.birthday = None
-        if birthday:
-            self.birthday = Birthday(birthday)
+        self.birthday = Birthday(birthday) if birthday else None
 
     def add_phone(self, phone):
         try:
@@ -58,7 +75,7 @@ class Record:
         for phone in self.phones:
             if phone.value == old_phone:
                 phone.value = new_phone
-                phone.validate_phone()
+                phone.validate(new_phone)
                 phone_found = True
                 break
         if not phone_found:
@@ -71,24 +88,18 @@ class Record:
         return None
 
     def days_to_birthday(self):
-        if self.birthday:
-            today = datetime.now().date()
-            next_birthday = datetime(today.year, self.birthday.value.month, self.birthday.value.day).date()
-            if today > next_birthday:
-                next_birthday = datetime(today.year + 1, self.birthday.value.month, self.birthday.value.day).date()
-            return (next_birthday - today).days
-        else:
+        if not self.birthday:
             return None
+        today = datetime.now()
+        next_birthday = datetime(today.year, self.birthday.month, self.birthday.day)
+        if today > next_birthday:
+            next_birthday = datetime(today.year + 1, self.birthday.month, self.birthday.day)
+        days_left = (next_birthday - today).days
+        return days_left
 
-    def print_days_to_birthday(self):
-        days = self.days_to_birthday()
-        if days is not None:
-            print(f"Днів до наступного дня народження для {self.name.value}: {days} днів")
-        else:
-            print(f"Інформація про народження відсутня для {self.name.value}")
+    def __str__(self):
+        return f"Contact name: {self.name.value}, phones: {'; '.join(str(p) for p in self.phones)}, birthday: {self.birthday.value if self.birthday else 'Not specified'}"
 
-    def __repr__(self):
-        return f"Ім'я контакту: {self.name.value}, телефони: {'; '.join(str(p) for p in self.phones)}, день народження: {self.birthday}"
 
 class AddressBook(UserDict):
     def add_record(self, record):
@@ -101,21 +112,8 @@ class AddressBook(UserDict):
         if name in self.data:
             del self.data[name]
 
+    def iterator(self, batch_size):
+        records = list(self.data.values())
+        for i in range(0, len(records), batch_size):
+            yield records[i:i + batch_size]
 
-
-# Створюємо користувача з ім'ям, телефоном і, за бажанням, днем народження
-user_name = "Іван Іванов"
-user_phone = "1234567890"
-user_birthday = "1990-05-15"
-
-try:
-    # Спробуємо створити користувача і додати його до адресної книги
-    user_record = Record(name=user_name, birthday=Birthday(user_birthday))
-    user_record.add_phone(user_phone)
-
-    # Виведемо інформацію про користувача та кількість днів до наступного дня народження
-    print(user_record)
-    user_record.days_to_birthday()
-
-except ValueError as e:
-    print(f"Помилка: {e}")
