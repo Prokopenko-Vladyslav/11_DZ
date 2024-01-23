@@ -1,49 +1,54 @@
-from datetime import datetime
 from collections import UserDict
+from datetime import datetime, date
 
 
 class Field:
     def __init__(self, value):
-        self.__value = None
+        self._value = None
         self.value = value
-
-    def __repr__(self):
-        return str(self.value)
 
     @property
     def value(self):
-        return self.__value
+        return self._value
 
     @value.setter
-    def value(self, new_value):
-        if self.validate(new_value):
-            self.__value = new_value
-
-    def validate(self, value):
-        pass
+    def value(self, value):
+        self._value = value
 
 
 class Name(Field):
-    pass
+    def __init__(self, value):
+        super().__init__(value)
 
 
 class Phone(Field):
     def __init__(self, value):
         super().__init__(value)
-        self.validate_phone()
 
     def validate_phone(self):
-        if not self.value.isdigit() or len(self.value) != 10:
-            raise ValueError("Phone number must contain 10 digits.")
+        if self.value is not None:
+            if len(self.value) != 10 or not self.value.isdigit():
+                raise ValueError("Phone number must contain 10 digits.")
+
+    @property
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self, value):
+        self._value = value
+        self.validate_phone()
 
 
 class Birthday(Field):
-    def validate(self, value):
+    def __init__(self, value):
+        super().__init__(value)
+
+    def validate_date(self, value):
         try:
             datetime.strptime(value, "%Y-%m-%d")
         except ValueError:
-            raise ValueError("Invalid date format. Use YYYY-MM-DD.")
-        super().validate(value)
+            raise ValueError("Невірний формат дати. Використовуйте YYYY-MM-DD.")
 
     @property
     def year(self):
@@ -59,16 +64,15 @@ class Birthday(Field):
 
 
 class Record:
-    def __init__(self, name, birthday=None):
+    def __init__(self, name, birthday):
         self.name = Name(name)
         self.phones = []
-        self.birthday = Birthday(birthday) if birthday else None
+        self.birthday = birthday
 
     def add_phone(self, phone):
-        try:
-            self.phones.append(Phone(phone))
-        except ValueError as e:
-            return e
+        phone_number = Phone(phone)
+        phone_number.validate_phone()
+        self.phones.append(phone_number)
 
     def remove_phone(self, phone):
         self.phones = [p for p in self.phones if p.value != phone]
@@ -93,15 +97,19 @@ class Record:
     def days_to_birthday(self):
         if not self.birthday:
             return None
-        today = datetime.now()
-        next_birthday = datetime(today.year, self.birthday.month, self.birthday.day)
-        if today > next_birthday:
-            next_birthday = datetime(today.year + 1, self.birthday.month, self.birthday.day)
-        days_left = (next_birthday - today).days
-        return days_left
+        today = date.today()
+        birthday_day = datetime.strptime(self.birthday.value, "%Y-%m-%d")
+        user_birthday_in_this_year = date(today.year, birthday_day.month, birthday_day.day)
+        different = user_birthday_in_this_year - today
+        if different.days > 0:
+            return f'left until birthday {different.days} days'
+        else:
+            user_birthday_in_next_year = date(today.year + 1, birthday_day.month, birthday_day.day)
+            different_new = user_birthday_in_next_year - today
+            return f'left until birthday {different_new.days} days'
 
     def __str__(self):
-        return f"Contact name: {self.name.value}, phones: {'; '.join(str(p) for p in self.phones)}, birthday: {self.birthday.value if self.birthday else 'Not specified'}"
+        return f"Contact name: {self.name.value}, phones: {'; '.join(p.value for p in self.phones)}"
 
 
 class AddressBook(UserDict):
@@ -109,7 +117,7 @@ class AddressBook(UserDict):
         self.data[record.name.value] = record
 
     def find(self, name):
-        return self.data.get(name)
+        return [record for record in self.data.values() if record.name.value == name]
 
     def delete(self, name):
         if name in self.data:
@@ -119,3 +127,14 @@ class AddressBook(UserDict):
         records = list(self.data.values())
         for i in range(0, len(records), batch_size):
             yield records[i:i + batch_size]
+
+
+if __name__ == "__main__":
+    book = AddressBook()
+
+
+john_record = Record("John", birthday="1996-06-07")
+john_record.add_phone("1234567890")
+book.add_record(john_record)
+print(john_record.birthday)
+print(john_record)
