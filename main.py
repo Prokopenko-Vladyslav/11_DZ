@@ -4,16 +4,16 @@ from datetime import datetime, date
 
 class Field:
     def __init__(self, value):
-        self._value = None
+        self.__value = None
         self.value = value
 
     @property
     def value(self):
-        return self._value
+        return self.__value
 
     @value.setter
     def value(self, value):
-        self._value = value
+        self.__value = value
 
 
 class Name(Field):
@@ -32,11 +32,11 @@ class Phone(Field):
 
     @property
     def value(self):
-        return self._value
+        return self.__value
 
     @value.setter
     def value(self, value):
-        self._value = value
+        self.__value = value
         self.validate_phone()
 
 
@@ -64,7 +64,7 @@ class Birthday(Field):
 
 
 class Record:
-    def __init__(self, name, birthday):
+    def __init__(self, name, birthday=None):
         self.name = Name(name)
         self.phones = []
         self.birthday = birthday
@@ -117,24 +117,23 @@ class AddressBook(UserDict):
         self.data[record.name.value] = record
 
     def find(self, name):
-        return [record for record in self.data.values() if record.name.value == name]
+        return self.data.get(name)
 
     def delete(self, name):
         if name in self.data:
             del self.data[name]
+        else:
+            print(f"Record with name '{name}' not found.")
 
     def iterator(self, batch_size):
         records = list(self.data.values())
         for i in range(0, len(records), batch_size):
             yield records[i:i + batch_size]
 
-
-if __name__ == "__main__":
-    book = AddressBook()
-
-
+book = AddressBook()
 john_record = Record("John", birthday="1996-06-07")
 john_record.add_phone("1234567890")
+john_record.add_phone("5555555555")
 book.add_record(john_record)
 print(john_record.birthday)
 print(john_record)
