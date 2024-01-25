@@ -25,7 +25,7 @@ class Phone(Field):
     def __init__(self, value):
         super().__init__(value)
 
-    def validate_phone(self):
+    def validate(self):
         if self.value is not None:
             if len(self.value) != 10 or not self.value.isdigit():
                 raise ValueError("Phone number must contain 10 digits.")
@@ -37,14 +37,14 @@ class Phone(Field):
     @value.setter
     def value(self, value):
         self.__value = value
-        self.validate_phone()
+        self.validate()
 
 
 class Birthday(Field):
     def __init__(self, value):
         super().__init__(value)
 
-    def validate_date(self, value):
+    def validate(self, value):
         try:
             datetime.strptime(value, "%Y-%m-%d")
         except ValueError:
@@ -71,7 +71,7 @@ class Record:
 
     def add_phone(self, phone):
         phone_number = Phone(phone)
-        phone_number.validate_phone()
+        phone_number.validate()
         self.phones.append(phone_number)
 
     def remove_phone(self, phone):
@@ -81,8 +81,7 @@ class Record:
         phone_found = False
         for phone in self.phones:
             if phone.value == old_phone:
-                phone.value = new_phone
-                phone.validate(new_phone)
+                phone.value = new_phone  # validate буде автоматично викликаний всередині value.setter
                 phone_found = True
                 break
         if not phone_found:
@@ -129,7 +128,7 @@ class AddressBook(UserDict):
         records = list(self.data.values())
         for i in range(0, len(records), batch_size):
             yield records[i:i + batch_size]
-
+            
 book = AddressBook()
 john_record = Record("John", birthday="1996-06-07")
 john_record.add_phone("1234567890")
