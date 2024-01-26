@@ -29,6 +29,8 @@ class Phone(Field):
         if self.value is not None:
             if len(self.value) != 10 or not self.value.isdigit():
                 raise ValueError("Phone number must contain 10 digits.")
+            else:
+                return True
 
     @property
     def value(self):
@@ -43,6 +45,7 @@ class Phone(Field):
 class Birthday(Field):
     def __init__(self, value):
         super().__init__(value)
+        self.validate(value)
 
     def validate(self, value):
         try:
@@ -51,28 +54,30 @@ class Birthday(Field):
             raise ValueError("Невірний формат дати. Використовуйте YYYY-MM-DD.")
 
     @property
-    def year(self):
-        return int(self.value.split('-')[0])
+    def value(self):
+        return self.__value
 
-    @property
-    def month(self):
-        return int(self.value.split('-')[1])
+    @value.setter
+    def value(self, value):
+        self.validate(value)
+        self.__value = value
 
-    @property
-    def day(self):
-        return int(self.value.split('-')[2])
+    def __str__(self):
+        return f"{self.value}"
 
 
 class Record:
     def __init__(self, name, birthday=None):
         self.name = Name(name)
         self.phones = []
-        self.birthday = birthday
+        self.birthday = Birthday(birthday)
 
     def add_phone(self, phone):
         phone_number = Phone(phone)
-        phone_number.validate()
-        self.phones.append(phone_number)
+        if phone_number.validate():
+            self.phones.append(phone_number)
+        else:
+            self.phones.append(None)
 
     def remove_phone(self, phone):
         self.phones = [p for p in self.phones if p.value != phone]
@@ -128,11 +133,11 @@ class AddressBook(UserDict):
         records = list(self.data.values())
         for i in range(0, len(records), batch_size):
             yield records[i:i + batch_size]
-            
+
 book = AddressBook()
 john_record = Record("John", birthday="1996-06-07")
 john_record.add_phone("1234567890")
 john_record.add_phone("5555555555")
 book.add_record(john_record)
-print(john_record.birthday)
+print(john_record.days_to_birthday())
 print(john_record)
