@@ -7,13 +7,19 @@ class Field:
         self.__value = None
         self.value = value
 
+    def validate(self, value):
+        return True
+
     @property
     def value(self):
         return self.__value
 
     @value.setter
     def value(self, value):
-        self.__value = value
+        if self.validate(value):
+            self.__value = value
+        else:
+            raise ValueError("Invalid value")
 
 
 class Name(Field):
@@ -25,12 +31,10 @@ class Phone(Field):
     def __init__(self, value):
         super().__init__(value)
 
-    def validate(self):
-        if self.value is not None:
-            if len(self.value) != 10 or not self.value.isdigit():
-                raise ValueError("Phone number must contain 10 digits.")
-            else:
-                return True
+    def validate(self, value):
+        if value is None or len(value) != 10 or not value.isdigit():
+            raise ValueError("Phone number must contain 10 digits.")
+        return True
 
     @property
     def value(self):
@@ -38,18 +42,20 @@ class Phone(Field):
 
     @value.setter
     def value(self, value):
-        self.__value = value
-        self.validate()
+        if self.validate(value):
+            self.__value = value
 
 
 class Birthday(Field):
     def __init__(self, value):
         super().__init__(value)
-        self.validate(value)
 
     def validate(self, value):
         try:
-            datetime.strptime(value, "%Y-%m-%d")
+            if value is None:
+                return True  # Дозволяємо None значення
+            elif datetime.strptime(value, "%Y-%m-%d"):
+                return True
         except ValueError:
             raise ValueError("Невірний формат дати. Використовуйте YYYY-MM-DD.")
 
@@ -59,8 +65,8 @@ class Birthday(Field):
 
     @value.setter
     def value(self, value):
-        self.validate(value)
-        self.__value = value
+        if self.validate(value):
+            self.__value = value
 
     def __str__(self):
         return f"{self.value}"
@@ -73,11 +79,11 @@ class Record:
         self.birthday = Birthday(birthday)
 
     def add_phone(self, phone):
-        phone_number = Phone(phone)
-        if phone_number.validate():
+        try:
+            phone_number = Phone(phone)
             self.phones.append(phone_number)
-        else:
-            self.phones.append(None)
+        except ValueError as e:
+            print(f"Error adding phone: {e}")
 
     def remove_phone(self, phone):
         self.phones = [p for p in self.phones if p.value != phone]
@@ -86,7 +92,7 @@ class Record:
         phone_found = False
         for phone in self.phones:
             if phone.value == old_phone:
-                phone.value = new_phone  # validate буде автоматично викликаний всередині value.setter
+                phone.value = new_phone
                 phone_found = True
                 break
         if not phone_found:
@@ -135,9 +141,8 @@ class AddressBook(UserDict):
             yield records[i:i + batch_size]
 
 book = AddressBook()
-john_record = Record("John", birthday="1996-06-07")
-john_record.add_phone("1234567890")
-john_record.add_phone("5555555555")
-book.add_record(john_record)
-print(john_record.days_to_birthday())
-print(john_record)
+jon = Record("John", birthday="1996-06-07")
+jon.add_phone("1234567890")
+jon.add_phone("5555555555")
+book.add_record(jon)
+print(jon.days_to_birthday())
