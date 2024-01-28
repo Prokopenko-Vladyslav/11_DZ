@@ -36,15 +36,6 @@ class Phone(Field):
             raise ValueError("Phone number must contain 10 digits.")
         return True
 
-    @property
-    def value(self):
-        return self.__value
-
-    @value.setter
-    def value(self, value):
-        if self.validate(value):
-            self.__value = value
-
 
 class Birthday(Field):
     def __init__(self, value):
@@ -53,20 +44,11 @@ class Birthday(Field):
     def validate(self, value):
         try:
             if value is None:
-                return True  # Дозволяємо None значення
+                return True
             elif datetime.strptime(value, "%Y-%m-%d"):
                 return True
         except ValueError:
             raise ValueError("Невірний формат дати. Використовуйте YYYY-MM-DD.")
-
-    @property
-    def value(self):
-        return self.__value
-
-    @value.setter
-    def value(self, value):
-        if self.validate(value):
-            self.__value = value
 
     def __str__(self):
         return f"{self.value}"
@@ -139,11 +121,3 @@ class AddressBook(UserDict):
         records = list(self.data.values())
         for i in range(0, len(records), batch_size):
             yield records[i:i + batch_size]
-
-
-book = AddressBook()
-jon = Record("John", birthday="1996-06-07")
-jon.add_phone("1234567890")
-jon.add_phone("5555555555")
-book.add_record(jon)
-print(jon.days_to_birthday())
